@@ -79,8 +79,8 @@ postgresql_packages:
 #  - postgis33_{{ postgresql_version }}
 #  - pgrouting_{{ postgresql_version }}
 #  - pgvector_{{ postgresql_version }}
-#  - pgaudit17_{{ postgresql_version }}
-
+  - pgaudit15_{{ postgresql_version }}
+  
 # Extra packages
 etcd_package_repo: "https://github.com/etcd-io/etcd/releases/download/v{{ etcd_version }}/etcd-v{{ etcd_version }}-linux-amd64.tar.gz"
 vip_manager_package_repo:
