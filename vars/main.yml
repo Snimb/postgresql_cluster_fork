@@ -7,12 +7,12 @@ proxy_env: {}  # yamllint disable rule:braces
 # ---------------------------------------------------------------------
 
 # Cluster variables
-cluster_vip: ""  # IP address for client access to the databases in the cluster (optional).
+cluster_vip: "192.168.56.127"  # IP address for client access to the databases in the cluster (optional).
 vip_interface: "{{ ansible_default_ipv4.interface }}"  # interface name (e.g., "ens32").
 # Note: VIP-based solutions such as keepalived or vip-manager may not function correctly in cloud environments like AWS.
 
-patroni_cluster_name: "postgres-cluster"  # the cluster name (must be unique for each cluster)
-patroni_install_version: "3.3.2"  # or 'latest'
+patroni_cluster_name: "postgres-cluster-bankingcircle"  # the cluster name (must be unique for each cluster)
+patroni_install_version: "latest"  # or 'latest'
 
 patroni_superuser_username: "postgres"
 patroni_superuser_password: "postgres-pass"  # please change password
@@ -112,7 +112,8 @@ patroni_etcd_protocol: "" # (optional) http or https, if not specified http is u
 # https://patroni.readthedocs.io/en/latest/yaml_configuration.html#consul
 
 # if dcs_type: "consul"
-consul_version: "1.15.8"
+consul_version: "latest"  # or a specific version (e.q., '1.18.2') if 'consul_install_from_repo' is 'false'
+consul_install_from_repo: true  # specify 'false' only if patroni_installation_method: "pip" is used
 consul_config_path: "/etc/consul"
 consul_configd_path: "{{ consul_config_path }}/conf.d"
 consul_data_path: "/var/lib/consul"
@@ -196,7 +197,6 @@ postgresql_users:
 postgresql_databases: 
   - { db: "sassv2", encoding: "UTF8", lc_collate: "en_US.UTF-8", lc_ctype: "en_SU.UTF-8", owner: "postgres" }
 #  - { db: "mydatabase2", encoding: "UTF8", lc_collate: "ru_RU.UTF-8", lc_ctype: "ru_RU.UTF-8", owner: "mydb-user", conn_limit: "50" }
-#  - { db: "", encoding: "UTF8", lc_collate: "en_US.UTF-8", lc_ctype: "en_US.UTF-8", owner: "" }
 #  - { db: "", encoding: "UTF8", lc_collate: "en_US.UTF-8", lc_ctype: "en_US.UTF-8", owner: "" }
 
 # (optional) list of schemas to be created (if not already exists)
@@ -309,13 +309,14 @@ postgresql_parameters:
 # Set this variable to 'true' if you want the cluster to be automatically restarted
 # after changing the 'postgresql_parameters' variable that requires a restart in the 'config_pgcluster.yml' playbook.
 # By default, the cluster will not be automatically restarted.
-pending_restart: false
+pending_restart: true
 
 # specify additional hosts that will be added to the pg_hba.conf
 postgresql_pg_hba:
   - { type: "local", database: "all", user: "{{ patroni_superuser_username }}", address: "", method: "trust" }
   - { type: "local", database: "all", user: "{{ pgbouncer_auth_username }}", address: "", method: "trust" } # required for pgbouncer auth_user
   - { type: "local", database: "replication", user: "{{ patroni_superuser_username }}", address: "", method: "trust" }
+#  - { type: "local", database: "all", user: "all", address: "", method: "{{ postgresql_password_encryption_algorithm }}" }
   - { type: "hostssl", database: "all", user: "all", address: "0.0.0.0/0", method: "{{ postgresql_password_encryption_algorithm }}" }
   - { type: "host", database: "all", user: "all", address: "127.0.0.1/32", method: "{{ postgresql_password_encryption_algorithm }}" }
   - { type: "host", database: "all", user: "all", address: "::1/128", method: "{{ postgresql_password_encryption_algorithm }}" }
@@ -404,15 +405,15 @@ patroni_standby_cluster:
 # Permanent replication slots.
 # These slots will be preserved during switchover/failover.
 # https://patroni.readthedocs.io/en/latest/dynamic_configuration.html
-patroni_slots: []
+patroni_slots: 
 #  - slot: "logical_replication_slot" # the name of the permanent replication slot.
 #    type: "logical" # the type of slot. Could be 'physical' or 'logical' (if the slot is logical, you have to define 'database' and 'plugin').
 #    plugin: "pgoutput" # the plugin name for the logical slot.
 #    database: "postgres" # the database name where logical slots should be created.
-#  - slot: "test_logical_replication_slot"
-#    type: "logical"
-#    plugin: "pgoutput"
-#    database: "test"
+  - slot: "logical_replication_slot"
+    type: "logical"
+    plugin: "pgoutput"
+    database: "sassv2"
 
 patroni_log_destination: stderr  # or 'logfile'
 # if patroni_log_destination: logfile
@@ -433,23 +434,23 @@ patroni_watchdog_device: /dev/watchdog
 patroni_postgresql_use_pg_rewind: true  # or 'false'
 # try to use pg_rewind on the former leader when it joins cluster as a replica.
 
-patroni_remove_data_directory_on_rewind_failure: false  # or 'true' (if use_pg_rewind: 'true')
+patroni_remove_data_directory_on_rewind_failure: true  # or 'true' (if use_pg_rewind: 'true')
 # avoid removing the data directory on an unsuccessful rewind
 # if 'true', Patroni will remove the PostgreSQL data directory and recreate the replica.
 
-patroni_remove_data_directory_on_diverged_timelines: false  # or 'true'
+patroni_remove_data_directory_on_diverged_timelines: true  # or 'true'
 # if 'true', Patroni will remove the PostgreSQL data directory and recreate the replica
 # if it notices that timelines are diverging and the former master can not start streaming from the new master.
 
 # https://patroni.readthedocs.io/en/latest/replica_bootstrap.html#bootstrap
-patroni_cluster_bootstrap_method: "pgbackrest" # "initdb" or "wal-g", "pgbackrest", "pg_probackup"
+patroni_cluster_bootstrap_method: "initdb"  # or "wal-g", "pgbackrest", "pg_probackup"
 
 # https://patroni.readthedocs.io/en/latest/replica_bootstrap.html#building-replicas
 patroni_create_replica_methods:
   - pgbackrest
 #  - wal_g
 #  - pg_probackup
-#  - basebackup
+  - basebackup
 
 pgbackrest:
   - { option: "command", value: "/usr/bin/pgbackrest --stanza={{ pgbackrest_stanza }} --delta restore" }

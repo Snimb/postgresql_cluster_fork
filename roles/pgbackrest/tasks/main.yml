@@ -43,6 +43,7 @@
         timeout: 30
         validate_certs: false
 
+### INSTALL ###
     - name: Install PostgreSQL repository
       ansible.builtin.package:
         name: /tmp/pgdg-redhat-repo-latest.noarch.rpm
@@ -52,6 +53,7 @@
       until: package_status is success
       delay: 5
       retries: 3
+### INSTALL ###
 
     - name: Make sure pgdg repository is installed
       ansible.builtin.package:

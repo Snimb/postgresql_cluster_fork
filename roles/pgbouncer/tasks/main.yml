@@ -124,10 +124,10 @@
     label: "{{ 'pgbouncer' if idx == 0 else 'pgbouncer-%d' % (idx + 1) }}"
   tags: pgbouncer_logrotate, pgbouncer
 
+### SSL ###
 - name: Create server key pair using OpenSSL
   become: true
   become_user: root
-  run_once: true
   ansible.builtin.shell: |
     openssl req -new -newkey rsa:2048 -days 3650 -nodes -x509 -sha256 \
     -subj "/C=CH/ST=/L=/O=SASS/CN=database" \
@@ -140,7 +140,6 @@
 - name: Set permissions on server certificate and key files
   become: true
   become_user: root
-  run_once: true
   ansible.builtin.file:
     path: "/etc/pgbouncer/server.crt"
     owner: postgres
@@ -151,13 +150,13 @@
 - name: Set permissions on server key file
   become: true
   become_user: root
-  run_once: true
   ansible.builtin.file:
     path: "/etc/pgbouncer/server.key"
     owner: postgres
     group: postgres
     mode: '0640'
   tags: create_crt_and_key
+### SSL ###
 
 - name: Configure pgbouncer.ini
   ansible.builtin.template:
