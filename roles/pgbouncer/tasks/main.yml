@@ -131,17 +131,17 @@
   ansible.builtin.shell: |
     openssl req -new -newkey rsa:2048 -days 3650 -nodes -x509 -sha256 \
     -subj "/C=CH/ST=/L=/O=SASS/CN=database" \
-    -keyout "/etc/pgbouncer/server.key" \
-    -out "/etc/pgbouncer/server.crt"
+    -keyout "{{ postgresql_data_dir }}/server.key" \
+    -out "{{ postgresql_data_dir }}/server.crt"
   args:
-    creates: "/etc/pgbouncer/server.key"
+    creates: "{{ postgresql_data_dir }}/server.key"
   tags: create_crt_and_key
 
 - name: Set permissions on server certificate and key files
   become: true
   become_user: root
   ansible.builtin.file:
-    path: "/etc/pgbouncer/server.crt"
+    path: "{{ postgresql_data_dir }}/server.crt"
     owner: postgres
     group: postgres
     mode: '0640'
@@ -151,10 +151,32 @@
   become: true
   become_user: root
   ansible.builtin.file:
-    path: "/etc/pgbouncer/server.key"
+    path: "{{ postgresql_data_dir }}/server.key"
     owner: postgres
     group: postgres
     mode: '0640'
+  tags: create_crt_and_key
+
+- name: Add pgbouncer user to read and write access for server certificate and key
+  become: true
+  become_user: root
+  ansible.builtin.acl:
+    path: "{{ postgresql_data_dir }}/server.crt"
+    entity: pgbouncer
+    etype: user
+    perms: rw
+    state: present
+  tags: create_crt_and_key
+
+- name: Add pgbouncer user to read and write access for server key
+  become: true
+  become_user: root
+  ansible.builtin.acl:
+    path: "{{ postgresql_data_dir }}/server.key"
+    entity: pgbouncer
+    etype: user
+    perms: rw
+    state: present
   tags: create_crt_and_key
 ### SSL ###
 
